@@ -1,4 +1,4 @@
-# vSSH - SSH Manager for VS Code and Cursor
+# vSSH - SSH Manager for VS Code and other forks
 
 Менеджер SSH подключений с интеграцией SFTP, поддержкой туннелей и SSH Gateway.
 
