@@ -1,8 +1,0 @@
-const fs = require('fs');
-
-// Создаём PNG иконку 512x512 (упрощённая консоль)
-// Это base64 закодированная PNG иконка
-const iconData = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eAAAABhGlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9TpSIVBzuIOGSoThZERRy1CkWoEGqFVh1MLv2CJg1Jiouj4Fpw8GOx6uDirKuDqyAIfoA4OTopukiJ/0sKLWI8OO7Hu3uPu3eAUC8zzeoYBzTdNlOJuJjJroqhVwQRQgD9GJaZZcxJUhK+4+seAb7exXiW/7k/R4+asxgQEIlnmWHaxBvE05u2wXmfOMKKskp8Tjxm0gWJH7muePzGueCywDMjZjo1TxwhFgtdrHWxJhsq8TRxVNV0yhcyHquctzhr5Spr3pO/MJzTV5a5TnMYCSxiCRJEKKiihDJsxGjVSbGQov24j3/Q9UvkUshVAiPHAirQILt+8D/43a2Vn5zwksJxoPPFcT5GgNAu0Kg5zvex4zROgOAzcKW3/JU6MPNJeq2lRY+A3m3g4rqlyXvA5Q4w8GTIpuxKQZpCPg+8n9E3ZYH+W6BnzeutuY/TByBNXSVvgINDYKRA2ese7+7r7u3fM83+fgDAvHLGj7r9AwAAAAJcSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB+gCFgkXMj+P8VAAAAB3RJTUUHggMVDhQc5j3+9gAABhFJREFUeNrt3c1twzAQRdGnINcguAJX4ApUgSpQBapAFbgCR9kiiC/gD0mRvHcWgGAkDfExGFKy3W63BQD+1c/RAwDgsggAgBQBABAKAIAUAQCQIgAAUgQAQIoAAEgRAAApAgAgRQAApAgAgBQBABA', 'base64');
-
-// Это заглушка - реальную иконку нужно создать через ImageMagick или нарисовать
-console.log('Icon placeholder created');
