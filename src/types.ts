@@ -1,5 +1,13 @@
 import * as vscode from 'vscode';
 
+export interface SSHFavorite {
+    id: string;
+    name: string;
+    serverName: string;
+    serverId: string;
+    savedAt: string;
+}
+
 export interface ServerConfig {
     name: string;
     host: string;
@@ -49,4 +57,5 @@ export interface SSHConfigData {
     servers: ServerConfig[];
     folders: FolderConfig[];
     tunnels?: TunnelConfig[];
+    favorites?: SSHFavorite[];
 }

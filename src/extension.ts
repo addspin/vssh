@@ -6,6 +6,8 @@ import { SftpPanel } from './sftpPanel';
 import { TunnelManager } from './tunnelManager';
 import { SftpProvider, SftpFileItem } from './sftpProvider';
 import { TunnelProvider, TunnelItem } from './tunnelProvider';
+import { FavoriteManager } from './favoriteManager';
+import { FavoriteProvider, FavoriteItem } from './favoriteProvider';
 
 let serverProvider: ServerProvider;
 let sshConfigManager: SSHConfigManager;
@@ -13,6 +15,8 @@ let tunnelManager: TunnelManager;
 let sftpProvider: SftpProvider;
 let vsshTreeView: vscode.TreeView<VsshTreeItem> | undefined;
 let tunnelProvider: TunnelProvider | undefined;
+let favoriteManager: FavoriteManager | undefined;
+let favoriteProvider: FavoriteProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('vSSH extension is now active!');
@@ -20,6 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Инициализация менеджеров
     sshConfigManager = new SSHConfigManager();
     tunnelManager = new TunnelManager(sshConfigManager);
+    favoriteManager = new FavoriteManager(sshConfigManager);
     sftpProvider = new SftpProvider();
 
     // Провайдер дерева серверов
@@ -27,6 +32,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Провайдер дерева туннелей
     tunnelProvider = new TunnelProvider(tunnelManager);
+
+    // Провайдер дерева избранного
+    favoriteProvider = new FavoriteProvider(favoriteManager);
 
     // Регистрация дерева через createTreeView (требуется для drag-and-drop)
     vsshTreeView = vscode.window.createTreeView('vsshExplorer', {
@@ -41,6 +49,14 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.createTreeView('vsshTunnels', {
             treeDataProvider: tunnelProvider,
+            showCollapseAll: false
+        })
+    );
+    
+    // Регистрация дерева избранного
+    context.subscriptions.push(
+        vscode.window.createTreeView('vsshFavorites', {
+            treeDataProvider: favoriteProvider,
             showCollapseAll: false
         })
     );
@@ -674,6 +690,61 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    // Команда: Добавить в избранное
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.addFavorite', async (item: ServerItem) => {
+            if (!item.server || !favoriteManager) {
+                return;
+            }
+            await favoriteManager.addFavorite(item.server);
+        })
+    );
+
+    // Команда: Открыть избранное
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.openFavorite', async (item: FavoriteItem) => {
+            if (!item || !favoriteManager) {
+                return;
+            }
+            await favoriteManager.connectToFavorite(item.favorite);
+        })
+    );
+
+    // Команда: Удалить из избранного
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.removeFavorite', async (item: FavoriteItem) => {
+            if (!item || !favoriteManager) {
+                return;
+            }
+            await favoriteManager.removeFavorite(item.favorite.id);
+        })
+    );
+
+    // Команда: Очистить все избранное
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.clearAllFavorites', async () => {
+            if (!favoriteManager) {
+                return;
+            }
+            
+            const favorites = favoriteManager.getFavorites();
+            if (favorites.length === 0) {
+                vscode.window.showInformationMessage('Нет избранных серверов');
+                return;
+            }
+            
+            const confirm = await vscode.window.showWarningMessage(
+                `Удалить все ${favorites.length} избранных серверов?`,
+                { modal: true },
+                'Удалить все'
+            );
+            
+            if (confirm) {
+                await favoriteManager.clearAllFavorites();
+            }
+        })
+    );
 }
 
 async function showServerInputForm(
@@ -864,4 +935,5 @@ async function showServerInputForm(
 
 export function deactivate() {
     tunnelManager.dispose();
+    favoriteManager?.dispose();
 }

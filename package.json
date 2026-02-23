@@ -46,6 +46,11 @@
           "icon": "$(link)"
         },
         {
+          "id": "vsshFavorites",
+          "name": "Favorites",
+          "icon": "$(star-full)"
+        },
+        {
           "id": "vsshSftp",
           "name": "SFTP",
           "icon": "$(folder-opened)",
@@ -257,6 +262,29 @@
         "command": "vssh.closeAllTunnels",
         "title": "Close All Tunnels",
         "category": "vSSH Tunnels"
+      },
+      {
+        "command": "vssh.addFavorite",
+        "title": "Add to Favorites",
+        "icon": "$(star-full)",
+        "category": "vSSH Favorites"
+      },
+      {
+        "command": "vssh.openFavorite",
+        "title": "Open Favorite",
+        "icon": "$(remote-explorer)",
+        "category": "vSSH Favorites"
+      },
+      {
+        "command": "vssh.removeFavorite",
+        "title": "Remove from Favorites",
+        "icon": "$(trash)",
+        "category": "vSSH Favorites"
+      },
+      {
+        "command": "vssh.clearAllFavorites",
+        "title": "Clear All Favorites",
+        "category": "vSSH Favorites"
       }
     ],
     "menus": {
@@ -412,6 +440,25 @@
         {
           "command": "vssh.deleteTunnel",
           "when": "view == vsshTunnels"
+        },
+        {
+          "command": "vssh.addFavorite",
+          "when": "view == vsshExplorer && viewItem == server",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.openFavorite",
+          "when": "view == vsshFavorites && viewItem == sshFavorite",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.removeFavorite",
+          "when": "view == vsshFavorites"
+        },
+        {
+          "command": "vssh.clearAllFavorites",
+          "when": "view == vsshFavorites",
+          "group": "secondary"
         },
         {
           "command": "vssh.sftpDownload",

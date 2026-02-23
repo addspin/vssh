@@ -80,7 +80,7 @@ export class SSHConfigManager {
             if (fs.existsSync(this.configPath)) {
                 const content = fs.readFileSync(this.configPath, 'utf-8');
                 this.data = JSON.parse(content);
-                
+
                 // Расшифровываем пароли при загрузке (серверы и gateway)
                 for (const server of this.data.servers) {
                     if (server.password && server.password.includes(':')) {
@@ -90,7 +90,7 @@ export class SSHConfigManager {
                         server.gateway.password = decrypt(server.gateway.password);
                     }
                 }
-                
+
                 // Миграция: добавляем ID папкам если нет
                 for (const folder of this.data.folders) {
                     if (!folder.id) {
@@ -100,7 +100,12 @@ export class SSHConfigManager {
             }
         } catch (error) {
             console.error('Error loading vSSH config:', error);
-            this.data = { servers: [], folders: [], tunnels: [] };
+            this.data = { servers: [], folders: [], tunnels: [], favorites: [] };
+        }
+        
+        // Инициализируем favourites если нет
+        if (!this.data.favorites) {
+            this.data.favorites = [];
         }
     }
 
@@ -127,7 +132,8 @@ export class SSHConfigManager {
                     parentFolder: folder.parentFolder,
                     color: folder.color
                 })),
-                tunnels: this.data.tunnels || []
+                tunnels: this.data.tunnels || [],
+                favorites: this.data.favorites || []
             };
 
             fs.writeFileSync(this.configPath, JSON.stringify(dataToSave, null, 2), 'utf-8');
