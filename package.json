@@ -51,6 +51,11 @@
           "icon": "$(star-full)"
         },
         {
+          "id": "vsshSessions",
+          "name": "Sessions",
+          "icon": "$(library)"
+        },
+        {
           "id": "vsshSftp",
           "name": "SFTP",
           "icon": "$(folder-opened)",
@@ -285,6 +290,36 @@
         "command": "vssh.clearAllFavorites",
         "title": "Clear All Favorites",
         "category": "vSSH Favorites"
+      },
+      {
+        "command": "vssh.createSession",
+        "title": "Create Session",
+        "icon": "$(save)",
+        "category": "vSSH Sessions"
+      },
+      {
+        "command": "vssh.saveToSession",
+        "title": "Save to Session",
+        "icon": "$(save)",
+        "category": "vSSH Sessions"
+      },
+      {
+        "command": "vssh.launchSession",
+        "title": "Launch Session",
+        "icon": "$(debug-start)",
+        "category": "vSSH Sessions"
+      },
+      {
+        "command": "vssh.removeServerFromSession",
+        "title": "Remove Server from Session",
+        "icon": "$(trash)",
+        "category": "vSSH Sessions"
+      },
+      {
+        "command": "vssh.deleteSession",
+        "title": "Delete Session",
+        "icon": "$(trash)",
+        "category": "vSSH Sessions"
       }
     ],
     "menus": {
@@ -301,6 +336,11 @@
         },
         {
           "command": "vssh.searchServers",
+          "when": "view == vsshExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.createSession",
           "when": "view == vsshExplorer",
           "group": "navigation"
         },
@@ -377,6 +417,10 @@
           "group": "inline"
         },
         {
+          "command": "vssh.saveToSession",
+          "when": "view == vsshExplorer && viewItem == server"
+        },
+        {
           "command": "vssh.editServer",
           "when": "view == vsshExplorer && viewItem == server"
         },
@@ -447,6 +491,11 @@
           "group": "inline"
         },
         {
+          "command": "vssh.saveToSession",
+          "when": "view == vsshExplorer && viewItem == server",
+          "group": "inline"
+        },
+        {
           "command": "vssh.openFavorite",
           "when": "view == vsshFavorites && viewItem == sshFavorite",
           "group": "inline"
@@ -459,6 +508,24 @@
           "command": "vssh.clearAllFavorites",
           "when": "view == vsshFavorites",
           "group": "secondary"
+        },
+        {
+          "command": "vssh.createSession",
+          "when": "view == vsshSessions",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.launchSession",
+          "when": "view == vsshSessions && viewItem == sessionGroup",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.deleteSession",
+          "when": "view == vsshSessions && viewItem == sessionGroup"
+        },
+        {
+          "command": "vssh.removeServerFromSession",
+          "when": "view == vsshSessions && viewItem == sessionServer"
         },
         {
           "command": "vssh.sftpDownload",

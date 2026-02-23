@@ -8,6 +8,13 @@ export interface SSHFavorite {
     savedAt: string;
 }
 
+export interface SSHSession {
+    id: string;
+    name: string;
+    servers: string[];  // Массив имён серверов
+    savedAt: string;
+}
+
 export interface ServerConfig {
     name: string;
     host: string;
@@ -58,4 +65,5 @@ export interface SSHConfigData {
     folders: FolderConfig[];
     tunnels?: TunnelConfig[];
     favorites?: SSHFavorite[];
+    sessions?: SSHSession[];
 }

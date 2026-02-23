@@ -1,10 +1,12 @@
 # vSSH - SSH Manager for VS Code and other forks
 
-Менеджер SSH подключений с интеграцией SFTP, поддержкой туннелей и SSH Gateway.
+Менеджер SSH подключений с интеграцией SFTP, поддержкой туннелей, сессий и SSH Gateway.
 
 ## Возможности
 
 - 📁 **Организация серверов** - группировка по папкам с цветовой маркировкой
+- ⭐ **Избранное** - быстрый доступ к часто используемым серверам
+- 📚 **Сессии** - группировка серверов для одновременного подключения
 - 🔌 **Быстрое подключение** - SSH терминал в один клик
 - 📤 **SFTP браузер** - передача файлов
 - 🚇 **SSH туннели** - создание локальных туннелей с автозапуском
@@ -37,7 +39,7 @@
 
 ```bash
 # Из VSIX файла
-code --install-extension vssh-0.1.0.vsix --force
+code --install-extension vssh-1.0.1.vsix --force
 
 # После установки перезапустите VS Code (Cmd+Q / полностью закройте и откройте)
 ```
@@ -46,7 +48,7 @@ code --install-extension vssh-0.1.0.vsix --force
 
 ```bash
 # Из VSIX файла
-cursor --install-extension vssh-0.1.0.vsix --force
+cursor --install-extension vssh-1.0.1.vsix --force
 ```
 
 ### Из GitHub Releases
@@ -175,6 +177,52 @@ code .
 3. Выберите сервер из списка
 4. Сервер подключится
 
+### Избранное (Favorites)
+
+#### Добавить в избранное:
+1. Найдите сервер в **SSH Servers**
+2. Нажмите **⭐ Add to Favorites** (звезда справа от сервера)
+3. Сервер появится в панели **Favorites**
+
+#### Открыть из избранного:
+1. Кликните на сервер в **Favorites**
+2. Или нажмите **📡 Open**
+3. Сервер подключится
+
+#### Удалить из избранного:
+1. Нажмите **🗑️ Remove** на сервере
+2. Или правый клик → **Remove from Favorites**
+
+### Сессии (Sessions)
+
+#### Создать сессию:
+1. Нажмите **💾 Create Session** в заголовке SSH Servers или Sessions
+2. Введите имя сессии (например: "Production Servers")
+
+#### Добавить сервер в сессию:
+1. Найдите сервер в **SSH Servers**
+2. Нажмите **💾 Save to Session**
+3. Выберите сессию из списка
+
+#### Запустить сессию:
+1. Откройте панель **Sessions**
+2. Найдите папку сессии
+3. Нажмите **▶️ Launch Session**
+4. **Все серверы** сессии подключатся одновременно
+
+#### Управление сессией:
+- **🗑️ Remove** на сервере в сессии — удалить сервер из сессии
+- **🗑️ Delete Session** на папке — удалить всю сессию
+
+#### Пример структуры сессии:
+```
+Sessions:
+  📁 Production (3 серверов)  [▶️]
+    ├─ 🖥 prod-web-01  [🗑️]
+    ├─ 🖥 prod-web-02  [🗑️]
+    └─ 🖥 prod-db-01  [🗑️]
+```
+
 ---
 
 ## Команды
@@ -189,6 +237,14 @@ code .
 | `vSSH: Delete Server` | Удалить сервер |
 | `vSSH: Edit Folder` | Редактировать папку (имя, цвет) |
 | `vSSH: Delete Folder` | Удалить папку |
+| `vSSH: Add to Favorites` | Добавить в избранное |
+| `vSSH: Open Favorite` | Открыть избранное |
+| `vSSH: Remove from Favorites` | Удалить из избранного |
+| `vSSH: Create Session` | Создать сессию |
+| `vSSH: Save to Session` | Сохранить сервер в сессию |
+| `vSSH: Launch Session` | Запустить сессию |
+| `vSSH: Remove Server from Session` | Удалить сервер из сессии |
+| `vSSH: Delete Session` | Удалить сессию |
 | `vSSH: Open SFTP Panel` | Открыть SFTP браузер |
 | `vSSH: Create Tunnel` | Создать туннель |
 | `vSSH: Start Tunnel` | Запустить сохранённый туннель |
@@ -250,6 +306,23 @@ code .
       "isActive": false,
       "autoStart": true
     }
+  ],
+  "favorites": [
+    {
+      "id": "fav123",
+      "name": "production",
+      "serverName": "production",
+      "serverId": "production",
+      "savedAt": "2026-02-23T..."
+    }
+  ],
+  "sessions": [
+    {
+      "id": "session123",
+      "name": "Production Servers",
+      "servers": ["prod-web-01", "prod-web-02", "prod-db-01"],
+      "savedAt": "2026-02-23T..."
+    }
   ]
 }
 ```
@@ -277,7 +350,7 @@ npm run watch
 npm run package
 
 # Установка локальной версии
-code --install-extension vssh-0.1.0.vsix --force
+code --install-extension vssh-1.0.1.vsix --force
 ```
 
 ---
@@ -294,6 +367,10 @@ vssh/
 │   ├── sshConnection.ts    # SSH подключение через терминал
 │   ├── tunnelManager.ts    # SSH туннели с автозапуском
 │   ├── tunnelProvider.ts   # Провайдер дерева туннелей
+│   ├── favoriteManager.ts  # Менеджер избранного
+│   ├── favoriteProvider.ts # Провайдер дерева избранного
+│   ├── sessionManager.ts   # Менеджер сессий
+│   ├── sessionProvider.ts  # Провайдер дерева сессий
 │   └── types.ts            # TypeScript интерфейсы
 ├── images/
 │   └── icon.png            # Иконка расширения

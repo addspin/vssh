@@ -8,6 +8,8 @@ import { SftpProvider, SftpFileItem } from './sftpProvider';
 import { TunnelProvider, TunnelItem } from './tunnelProvider';
 import { FavoriteManager } from './favoriteManager';
 import { FavoriteProvider, FavoriteItem } from './favoriteProvider';
+import { SessionManager } from './sessionManager';
+import { SessionProvider, SessionGroupItem, SessionServerItem } from './sessionProvider';
 
 let serverProvider: ServerProvider;
 let sshConfigManager: SSHConfigManager;
@@ -17,6 +19,8 @@ let vsshTreeView: vscode.TreeView<VsshTreeItem> | undefined;
 let tunnelProvider: TunnelProvider | undefined;
 let favoriteManager: FavoriteManager | undefined;
 let favoriteProvider: FavoriteProvider | undefined;
+let sessionManager: SessionManager | undefined;
+let sessionProvider: SessionProvider | undefined;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('vSSH extension is now active!');
@@ -25,6 +29,7 @@ export function activate(context: vscode.ExtensionContext) {
     sshConfigManager = new SSHConfigManager();
     tunnelManager = new TunnelManager(sshConfigManager);
     favoriteManager = new FavoriteManager(sshConfigManager);
+    sessionManager = new SessionManager(sshConfigManager);
     sftpProvider = new SftpProvider();
 
     // Провайдер дерева серверов
@@ -35,6 +40,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Провайдер дерева избранного
     favoriteProvider = new FavoriteProvider(favoriteManager);
+
+    // Провайдер дерева сессий
+    sessionProvider = new SessionProvider(sessionManager);
 
     // Регистрация дерева через createTreeView (требуется для drag-and-drop)
     vsshTreeView = vscode.window.createTreeView('vsshExplorer', {
@@ -57,6 +65,14 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.window.createTreeView('vsshFavorites', {
             treeDataProvider: favoriteProvider,
+            showCollapseAll: false
+        })
+    );
+    
+    // Регистрация дерева сессий
+    context.subscriptions.push(
+        vscode.window.createTreeView('vsshSessions', {
+            treeDataProvider: sessionProvider,
             showCollapseAll: false
         })
     );
@@ -745,6 +761,110 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    // Команда: Создать сессию
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.createSession', async (item?: ServerItem) => {
+            if (!sessionManager) {
+                return;
+            }
+            
+            const sessionName = await vscode.window.showInputBox({
+                prompt: 'Имя сессии',
+                placeHolder: 'Например: Production Servers, Daily Deploy'
+            });
+            
+            if (sessionName) {
+                const session = await sessionManager.createSession(sessionName);
+                
+                // Если вызвано из контекста сервера - добавляем сервер в сессию
+                if (item && item.server) {
+                    await sessionManager.addServerToSession(session.id, item.server.name);
+                }
+            }
+        })
+    );
+
+    // Команда: Сохранить сервер в сессию
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.saveToSession', async (item: ServerItem) => {
+            if (!item.server || !sessionManager) {
+                return;
+            }
+            
+            const sessions = sessionManager.getSessions();
+            if (sessions.length === 0) {
+                const createNew = await vscode.window.showWarningMessage(
+                    'Нет сохранённых сессий. Создать новую?',
+                    'Создать сессию'
+                );
+                if (createNew) {
+                    const sessionName = await vscode.window.showInputBox({
+                        prompt: 'Имя сессии',
+                        placeHolder: 'Например: Production Servers'
+                    });
+                    if (sessionName) {
+                        const session = await sessionManager.createSession(sessionName);
+                        await sessionManager.addServerToSession(session.id, item.server.name);
+                    }
+                }
+                return;
+            }
+            
+            const quickPickItems = sessions.map(session => ({
+                label: session.name,
+                description: `${session.servers.length} серверов`,
+                sessionId: session.id
+            }));
+            
+            const selected = await vscode.window.showQuickPick(quickPickItems, {
+                placeHolder: 'Выберите сессию для сохранения'
+            });
+            
+            if (selected) {
+                await sessionManager.addServerToSession(selected.sessionId, item.server.name);
+            }
+        })
+    );
+
+    // Команда: Запустить сессию
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.launchSession', async (item: SessionGroupItem) => {
+            if (!item || !sessionManager) {
+                return;
+            }
+            await sessionManager.connectToSession(item.session);
+        })
+    );
+
+    // Команда: Удалить сервер из сессии
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.removeServerFromSession', async (item: SessionServerItem) => {
+            if (!item || !sessionManager) {
+                return;
+            }
+            await sessionManager.removeServerFromSession(item.sessionId, item.serverName);
+        })
+    );
+
+    // Команда: Удалить сессию
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.deleteSession', async (item: SessionGroupItem) => {
+            if (!item || !sessionManager) {
+                return;
+            }
+            
+            const confirm = await vscode.window.showWarningMessage(
+                `Удалить сессию "${item.session.name}"?`,
+                { modal: true },
+                'Удалить'
+            );
+            
+            if (confirm) {
+                await sessionManager.deleteSession(item.session.id);
+            }
+        })
+    );
 }
 
 async function showServerInputForm(
@@ -936,4 +1056,5 @@ async function showServerInputForm(
 export function deactivate() {
     tunnelManager.dispose();
     favoriteManager?.dispose();
+    sessionManager?.dispose();
 }

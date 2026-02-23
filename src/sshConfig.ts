@@ -100,12 +100,15 @@ export class SSHConfigManager {
             }
         } catch (error) {
             console.error('Error loading vSSH config:', error);
-            this.data = { servers: [], folders: [], tunnels: [], favorites: [] };
+            this.data = { servers: [], folders: [], tunnels: [], favorites: [], sessions: [] };
         }
         
-        // Инициализируем favourites если нет
+        // Инициализируем favorites и sessions если нет
         if (!this.data.favorites) {
             this.data.favorites = [];
+        }
+        if (!this.data.sessions) {
+            this.data.sessions = [];
         }
     }
 
@@ -133,7 +136,8 @@ export class SSHConfigManager {
                     color: folder.color
                 })),
                 tunnels: this.data.tunnels || [],
-                favorites: this.data.favorites || []
+                favorites: this.data.favorites || [],
+                sessions: this.data.sessions || []
             };
 
             fs.writeFileSync(this.configPath, JSON.stringify(dataToSave, null, 2), 'utf-8');
