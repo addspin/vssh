@@ -1,0 +1,479 @@
+{
+  "name": "vssh",
+  "displayName": "vSSH",
+  "description": "SSH Manager for VS Code and Cursor - Connect, manage servers, and transfer files",
+  "version": "1.0.0",
+  "publisher": "vssh",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:addspin/vssh.git"
+  },
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other",
+    "Remote"
+  ],
+  "activationEvents": [
+    "onView:vsshExplorer"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vssh-explorer",
+          "title": "vSSH Explorer",
+          "icon": "$(terminal)"
+        }
+      ]
+    },
+    "views": {
+      "vssh-explorer": [
+        {
+          "id": "vsshExplorer",
+          "name": "SSH Servers",
+          "icon": "$(server)",
+          "dragAndDropController": {
+            "dropMimeTypes": ["application/vnd.code.tree.vssh"],
+            "dragMimeTypes": ["application/vnd.code.tree.vssh"]
+          }
+        },
+        {
+          "id": "vsshTunnels",
+          "name": "SSH Tunnels",
+          "icon": "$(link)"
+        },
+        {
+          "id": "vsshSftp",
+          "name": "SFTP",
+          "icon": "$(folder-opened)",
+          "when": "vsshSftpConnected",
+          "dragAndDropController": {
+            "dropMimeTypes": ["text/uri-list", "Files"],
+            "dragMimeTypes": []
+          }
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "vssh.addFolder",
+        "title": "Add Folder",
+        "icon": "$(new-folder)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.addServer",
+        "title": "Add Server",
+        "icon": "$(add)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.searchServers",
+        "title": "Search Servers",
+        "icon": "$(search)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.connect",
+        "title": "Connect",
+        "icon": "$(terminal)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.editServer",
+        "title": "Edit Server",
+        "icon": "$(edit)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.deleteServer",
+        "title": "Delete Server",
+        "icon": "$(trash)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.editFolder",
+        "title": "Edit Folder",
+        "icon": "$(edit)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.deleteFolder",
+        "title": "Delete Folder",
+        "icon": "$(trash)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.moveServer",
+        "title": "Move Server to Folder",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.moveServerUp",
+        "title": "Move Server to Root",
+        "icon": "$(arrow-up)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.moveFolder",
+        "title": "Move Folder to...",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.moveFolderUp",
+        "title": "Move Folder to Root",
+        "icon": "$(arrow-up)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.openConfig",
+        "title": "Open SSH Config",
+        "icon": "$(gear)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.importConfig",
+        "title": "Import SSH Config (Legacy)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.importVsshConfig",
+        "title": "Import vSSH Config",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.exportConfig",
+        "title": "Export SSH Config (Legacy)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.exportVsshConfig",
+        "title": "Export vSSH Config",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.exportVsshConfigWithPasswords",
+        "title": "Export vSSH Config (With Passwords)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.openSftp",
+        "title": "Open SFTP Panel",
+        "icon": "$(folder-opened)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.sftpDownload",
+        "title": "Download",
+        "icon": "$(cloud-download)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpUpload",
+        "title": "Upload Files",
+        "icon": "$(cloud-upload)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpOpenFile",
+        "title": "Open File",
+        "icon": "$(edit)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpDelete",
+        "title": "Delete",
+        "icon": "$(trash)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpRefresh",
+        "title": "Refresh",
+        "icon": "$(refresh)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpDisconnect",
+        "title": "Disconnect",
+        "icon": "$(debug-disconnect)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpNavigateUp",
+        "title": "Navigate Up",
+        "icon": "$(arrow-up)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpChangeDirectory",
+        "title": "Change Directory",
+        "icon": "$(symbol-constant)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpSelectItem",
+        "title": "Select Folder",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.sftpCreateFolder",
+        "title": "New Folder",
+        "icon": "$(new-folder)",
+        "category": "vSSH SFTP"
+      },
+      {
+        "command": "vssh.createTunnel",
+        "title": "Create Tunnel",
+        "icon": "$(link)",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.closeTunnel",
+        "title": "Close Tunnel",
+        "category": "vSSH"
+      },
+      {
+        "command": "vssh.startTunnel",
+        "title": "Start Tunnel",
+        "icon": "$(debug-start)",
+        "category": "vSSH Tunnels"
+      },
+      {
+        "command": "vssh.stopTunnel",
+        "title": "Stop Tunnel",
+        "icon": "$(debug-stop)",
+        "category": "vSSH Tunnels"
+      },
+      {
+        "command": "vssh.deleteTunnel",
+        "title": "Delete Tunnel",
+        "icon": "$(trash)",
+        "category": "vSSH Tunnels"
+      },
+      {
+        "command": "vssh.closeAllTunnels",
+        "title": "Close All Tunnels",
+        "category": "vSSH Tunnels"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "vssh.addFolder",
+          "when": "view == vsshExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.addServer",
+          "when": "view == vsshExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.searchServers",
+          "when": "view == vsshExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.closeAllTunnels",
+          "when": "view == vsshTunnels",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.openConfig",
+          "when": "view == vsshExplorer",
+          "group": "secondary"
+        },
+        {
+          "command": "vssh.importConfig",
+          "when": "view == vsshExplorer",
+          "group": "secondary"
+        },
+        {
+          "command": "vssh.importVsshConfig",
+          "when": "view == vsshExplorer",
+          "group": "secondary"
+        },
+        {
+          "command": "vssh.exportConfig",
+          "when": "view == vsshExplorer",
+          "group": "secondary"
+        },
+        {
+          "command": "vssh.exportVsshConfig",
+          "when": "view == vsshExplorer",
+          "group": "secondary"
+        },
+        {
+          "command": "vssh.exportVsshConfigWithPasswords",
+          "when": "view == vsshExplorer",
+          "group": "secondary"
+        },
+        {
+          "command": "vssh.sftpUpload",
+          "when": "view == vsshSftp",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.sftpNavigateUp",
+          "when": "view == vsshSftp",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.sftpChangeDirectory",
+          "when": "view == vsshSftp",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.sftpCreateFolder",
+          "when": "view == vsshSftp",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.sftpRefresh",
+          "when": "view == vsshSftp",
+          "group": "navigation"
+        },
+        {
+          "command": "vssh.sftpDisconnect",
+          "when": "view == vsshSftp",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vssh.connect",
+          "when": "view == vsshExplorer && viewItem == server",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.editServer",
+          "when": "view == vsshExplorer && viewItem == server"
+        },
+        {
+          "command": "vssh.deleteServer",
+          "when": "view == vsshExplorer && viewItem == server"
+        },
+        {
+          "command": "vssh.moveServer",
+          "when": "view == vsshExplorer && viewItem == server"
+        },
+        {
+          "command": "vssh.moveServerUp",
+          "when": "view == vsshExplorer && viewItem == server",
+          "group": "2_move"
+        },
+        {
+          "command": "vssh.openSftp",
+          "when": "view == vsshExplorer && viewItem == server",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.createTunnel",
+          "when": "view == vsshExplorer && viewItem == server"
+        },
+        {
+          "command": "vssh.editFolder",
+          "when": "view == vsshExplorer && viewItem == folder"
+        },
+        {
+          "command": "vssh.addFolder",
+          "when": "view == vsshExplorer && viewItem == folder"
+        },
+        {
+          "command": "vssh.deleteFolder",
+          "when": "view == vsshExplorer && viewItem == folder"
+        },
+        {
+          "command": "vssh.moveFolder",
+          "when": "view == vsshExplorer && viewItem == folder"
+        },
+        {
+          "command": "vssh.moveFolderUp",
+          "when": "view == vsshExplorer && viewItem == folder",
+          "group": "2_move"
+        },
+        {
+          "command": "vssh.addServer",
+          "when": "view == vsshExplorer && viewItem == folder"
+        },
+        {
+          "command": "vssh.startTunnel",
+          "when": "view == vsshTunnels && viewItem == savedTunnel",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.stopTunnel",
+          "when": "view == vsshTunnels && viewItem == activeTunnel",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.deleteTunnel",
+          "when": "view == vsshTunnels"
+        },
+        {
+          "command": "vssh.sftpDownload",
+          "when": "view == vsshSftp && viewItem == sftpFile",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.sftpOpenFile",
+          "when": "view == vsshSftp && viewItem == sftpFile",
+          "group": "inline"
+        },
+        {
+          "command": "vssh.sftpDownload",
+          "when": "view == vsshSftp && viewItem == sftpFolder"
+        },
+        {
+          "command": "vssh.sftpDelete",
+          "when": "view == vsshSftp && viewItem == sftpFile"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "vSSH",
+      "properties": {
+        "vssh.defaultPort": {
+          "type": "number",
+          "default": 22,
+          "description": "Default SSH port"
+        },
+        "vssh.defaultAuthMethod": {
+          "type": "string",
+          "enum": [
+            "password",
+            "privateKey"
+          ],
+          "default": "privateKey",
+          "description": "Default authentication method"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/ssh2": "^1.15.5",
+    "@types/ssh2-sftp-client": "^9.0.6",
+    "@types/vscode": "^1.100.0",
+    "@typescript-eslint/eslint-plugin": "^8.32.0",
+    "@typescript-eslint/parser": "^8.32.0",
+    "@vscode/vsce": "^3.7.2-7",
+    "eslint": "^10.0.0",
+    "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "ssh2": "^1.16.0",
+    "ssh2-sftp-client": "^12.0.1"
+  }
+}

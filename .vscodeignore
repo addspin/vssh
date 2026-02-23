@@ -1,0 +1,12 @@
+**/.gitignore
+**/.vscode/**
+**/how.md
+**/*.map
+**/tsconfig.json
+**/node_modules/**/test/**
+**/node_modules/**/tests/**
+**/node_modules/**/*.md
+**/node_modules/**/doc/**
+**/node_modules/**/example/**
+**/node_modules/.bin/**
+**/node_modules/**/*.d.ts
