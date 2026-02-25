@@ -21,12 +21,22 @@ export class SessionGroupItem extends vscode.TreeItem {
 export class SessionServerItem extends vscode.TreeItem {
     constructor(
         public readonly serverName: string,
-        public readonly sessionId: string
+        public readonly sessionId: string,
+        private readonly sshConfigManager: any
     ) {
         super(serverName, vscode.TreeItemCollapsibleState.None);
 
-        this.description = 'Сервер';
-        this.tooltip = `Сервер: ${serverName}`;
+        // Получаем информацию о сервере для отображения
+        const servers = sshConfigManager.getServers();
+        const server = servers.find((s: any) => s.name === serverName);
+        
+        if (server) {
+            this.description = `${server.host}:${server.port}`;
+            this.tooltip = `Сервер: ${server.name}\nХост: ${server.host}:${server.port}\nПользователь: ${server.username}`;
+        } else {
+            this.description = 'Сервер не найден';
+            this.tooltip = `Сервер: ${serverName}`;
+        }
         
         this.iconPath = new vscode.ThemeIcon('remote-explorer');
         this.contextValue = 'sessionServer';
@@ -39,7 +49,7 @@ export class SessionProvider implements vscode.TreeDataProvider<SessionTreeItem>
     private _onDidChangeTreeData: vscode.EventEmitter<SessionTreeItem | undefined | null | void> = new vscode.EventEmitter();
     readonly onDidChangeTreeData: vscode.Event<SessionTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
-    constructor(private sessionManager: SessionManager) {
+    constructor(private sessionManager: SessionManager, private sshConfigManager: any) {
         sessionManager.onDidChangeSessions(() => this.refresh());
     }
 
@@ -56,7 +66,7 @@ export class SessionProvider implements vscode.TreeDataProvider<SessionTreeItem>
             // Если это сессия - возвращаем серверы
             if (element instanceof SessionGroupItem) {
                 return element.session.servers.map(
-                    serverName => new SessionServerItem(serverName, element.session.id)
+                    serverName => new SessionServerItem(serverName, element.session.id, this.sshConfigManager)
                 );
             }
             return [];

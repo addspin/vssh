@@ -42,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
     favoriteProvider = new FavoriteProvider(favoriteManager);
 
     // Провайдер дерева сессий
-    sessionProvider = new SessionProvider(sessionManager);
+    sessionProvider = new SessionProvider(sessionManager, sshConfigManager);
 
     // Регистрация дерева через createTreeView (требуется для drag-and-drop)
     vsshTreeView = vscode.window.createTreeView('vsshExplorer', {
