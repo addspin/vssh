@@ -2,7 +2,7 @@
   "name": "vssh",
   "displayName": "vSSH",
   "description": "SSH Manager for VS Code and other forks - Connect, manage servers, and transfer files",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "publisher": "addspin",
   "icon": "images/icon.png",
   "repository": {
