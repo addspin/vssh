@@ -396,7 +396,7 @@ export function activate(context: vscode.ExtensionContext) {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: false,
-                filters: { 'SSH Config': ['config', 'txt'] }
+                filters: { 'All Files': ['*'] }
             });
             if (uris && uris.length > 0) {
                 await sshConfigManager.importConfig(uris[0].fsPath);
@@ -413,7 +413,7 @@ export function activate(context: vscode.ExtensionContext) {
                 canSelectFiles: true,
                 canSelectFolders: false,
                 canSelectMany: false,
-                filters: { 'JSON': ['json'] }
+                filters: { 'All Files': ['*'] }
             });
             if (uris && uris.length > 0) {
                 await sshConfigManager.importConfig(uris[0].fsPath);

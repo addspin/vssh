@@ -64,20 +64,18 @@ export class SSHConnection {
         // Хост
         sshArgs.push(this.server.host);
 
+        // Формируем SSH команду
         let sshCommand: string;
 
         // Если используется аутентификация по паролю и пароль сохранён
         if (this.server.authMethod === 'password' && this.server.password) {
-            // Проверяем наличие sshpass
             const hasSshpass = await this.checkSshpass();
             if (hasSshpass) {
-                // Экраним пароль для оболочки
                 const escapedPassword = this.server.password.replace(/'/g, "'\\''");
                 sshCommand = `sshpass -p '${escapedPassword}' ssh ${sshArgs.join(' ')}`;
             } else {
-                // sshpass не установлен, предупреждаем пользователя
                 vscode.window.showWarningMessage(
-                    'sshpass не найден. SSH запросит пароль вручную. Установите: brew install sshpass (macOS) или apt install sshpass (Linux)'
+                    'sshpass не найден. SSH запросит пароль вручную.'
                 );
                 sshCommand = `ssh ${sshArgs.join(' ')}`;
             }
@@ -85,11 +83,18 @@ export class SSHConnection {
             sshCommand = `ssh ${sshArgs.join(' ')}`;
         }
 
-        // Создаем терминал
+        // Определяем оболочку по умолчанию для платформы
+        const isWindows = process.platform === 'win32';
+        const shellPath = isWindows ? 'powershell.exe' : '/bin/bash';
+        const shellArgs = isWindows 
+            ? ['-Command', sshCommand]
+            : ['-c', sshCommand];
+
+        // Создаем терминал с оболочкой по умолчанию
         this.terminal = vscode.window.createTerminal({
             name: `SSH: ${this.server.name}`,
-            shellPath: '/bin/bash',
-            shellArgs: ['-c', sshCommand]
+            shellPath: shellPath,
+            shellArgs: shellArgs
         });
 
         this.terminal.show();
