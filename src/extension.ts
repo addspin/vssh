@@ -933,7 +933,7 @@ async function showServerInputForm(
             canSelectFiles: true,
             canSelectFolders: false,
             canSelectMany: false,
-            filters: { 'Private Keys': ['pem', 'key', 'id_rsa', 'id_ed25519'] }
+            filters: { 'All Files': ['*'] }
         });
         if (uris && uris.length > 0) {
             privateKeyPath = uris[0].fsPath;
@@ -1012,7 +1012,7 @@ async function showServerInputForm(
                         canSelectFiles: true,
                         canSelectFolders: false,
                         canSelectMany: false,
-                        filters: { 'Private Keys': ['pem', 'key', 'id_rsa', 'id_ed25519'] }
+                        filters: { 'All Files': ['*'] }
                     });
                     if (uris && uris.length > 0) {
                         gatewayPrivateKeyPath = uris[0].fsPath;

@@ -69,7 +69,9 @@ export class SSHConfigManager {
 
     constructor() {
         // Используем отдельный файл в директории ~/.vssh/
-        const vsshDir = path.join(process.env.HOME || '', '.vssh');
+        // Поддержка Windows (USERPROFILE) и Unix (HOME)
+        const homeDir = process.env.HOME || process.env.USERPROFILE || '';
+        const vsshDir = path.join(homeDir, '.vssh');
         this.configPath = path.join(vsshDir, VSSH_CONFIG_FILENAME);
         this.data = { servers: [], folders: [], tunnels: [] };
         this.load();
