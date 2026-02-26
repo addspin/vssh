@@ -2,7 +2,7 @@
   "name": "vssh",
   "displayName": "vSSH",
   "description": "SSH Manager for VS Code and other forks - Connect, manage servers, and transfer files",
-  "version": "1.1.2",
+  "version": "2.0.0",
   "publisher": "addspin",
   "icon": "images/icon.png",
   "repository": {
@@ -290,6 +290,11 @@
         "command": "vssh.clearAllFavorites",
         "title": "Clear All Favorites",
         "category": "vSSH Favorites"
+      },
+      {
+        "command": "vssh.changeMasterPassword",
+        "title": "Change Master Password",
+        "category": "vSSH Security"
       },
       {
         "command": "vssh.createSession",

@@ -6,34 +6,276 @@ import { ServerConfig, SSHConfigData, FolderConfig } from './types';
 
 const VSSH_CONFIG_FILENAME = 'vssh-config.json';
 const ENCRYPTION_ALGORITHM = 'aes-256-cbc';
+const MASTER_PASSWORD_KEY = 'vssh-master-password';
+
+// Глобальная переменная для мастер-пароля (сбрасывается при перезапуске)
+let cachedMasterPassword: string | undefined;
 
 // Генерация уникального ID
 function generateId(): string {
     return crypto.randomBytes(16).toString('hex');
 }
 
-// Получаем ключ шифрования из системных переменных или генерируем
-function getEncryptionKey(): Buffer {
-    let keyString = process.env.VSSH_ENCRYPTION_KEY;
+// Запрос мастер-пароля у пользователя
+async function promptMasterPassword(): Promise<string> {
+    const password = await vscode.window.showInputBox({
+        prompt: 'Введите мастер-пароль для шифрования/расшифровки паролей SSH',
+        password: true,
+        ignoreFocusOut: true,
+        placeHolder: 'Мастер-пароль'
+    });
     
-    if (!keyString) {
-        const hostname = require('os').hostname();
-        const home = process.env.HOME || process.env.USERPROFILE || '';
-        keyString = `${hostname}-${home}-vssh-secret-key-2024`;
+    if (!password) {
+        throw new Error('Мастер-пароль не введён');
     }
     
-    return crypto.createHash('sha256').update(keyString).digest();
+    return password;
 }
 
-function encrypt(text: string): string {
+// Получение мастер-пароля (из кэша или запрос с проверкой)
+export async function getMasterPassword(): Promise<string> {
+    if (!cachedMasterPassword) {
+        cachedMasterPassword = await promptMasterPassword();
+    }
+    return cachedMasterPassword;
+}
+
+// Принудительный запрос мастер-пароля с проверкой (при старте плагина)
+export async function requireMasterPassword(): Promise<boolean> {
+    const configPath = path.join(
+        process.env.HOME || process.env.USERPROFILE || '',
+        '.vssh',
+        VSSH_CONFIG_FILENAME
+    );
+    
+    // Проверяем есть ли зашифрованные пароли в конфиге
+    let hasEncryptedPasswords = false;
+    if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, 'utf-8');
+        const data = JSON.parse(content);
+        for (const server of data.servers || []) {
+            if (server.password && server.password.includes(':')) {
+                hasEncryptedPasswords = true;
+                break;
+            }
+        }
+    }
+    
+    // Если нет зашифрованных паролей - просто запрашиваем пароль
+    if (!hasEncryptedPasswords) {
+        try {
+            await getMasterPassword();
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+    
+    // Запрашиваем пароль пока не получится расшифровать
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+        try {
+            const password = await promptMasterPassword();
+            cachedMasterPassword = password;
+            
+            // Пробуем расшифровать первый пароль для проверки
+            const content = fs.readFileSync(configPath, 'utf-8');
+            const data = JSON.parse(content);
+            
+            for (const server of data.servers || []) {
+                if (server.password && server.password.includes(':')) {
+                    await decryptWithKey(server.password, password);
+                    // Успешно расшифровали - пароль верный!
+                    return true;
+                }
+            }
+            
+            // Нет зашифрованных паролей для проверки - принимаем пароль
+            return true;
+            
+        } catch (error) {
+            attempts++;
+            if (attempts < maxAttempts) {
+                const result = await vscode.window.showWarningMessage(
+                    `Неверный мастер-пароль! Попытка ${attempts} из ${maxAttempts}. Попробовать снова?`,
+                    'Попробовать снова',
+                    'Отмена'
+                );
+                if (result !== 'Попробовать снова') {
+                    return false;
+                }
+            } else {
+                vscode.window.showErrorMessage(
+                    `Превышено количество попыток (${maxAttempts}). Пароли не будут расшифрованы.`
+                );
+                return false;
+            }
+        }
+    }
+    
+    return false;
+}
+
+// Установка нового мастер-пароля (с проверкой старого)
+export async function changeMasterPassword(): Promise<void> {
+    // Запрашиваем старый пароль
+    const oldPassword = await vscode.window.showInputBox({
+        prompt: 'Введите СТАРЫЙ мастер-пароль',
+        password: true,
+        ignoreFocusOut: true
+    });
+    
+    if (!oldPassword) {
+        return;
+    }
+    
+    // Пробуем расшифровать первый попавшийся пароль для проверки
+    const configPath = path.join(
+        process.env.HOME || process.env.USERPROFILE || '',
+        '.vssh',
+        VSSH_CONFIG_FILENAME
+    );
+    
+    if (fs.existsSync(configPath)) {
+        const content = fs.readFileSync(configPath, 'utf-8');
+        const data = JSON.parse(content);
+        
+        // Находим первый зашифрованный пароль
+        let encryptedPassword: string | undefined;
+        for (const server of data.servers || []) {
+            if (server.password && server.password.includes(':')) {
+                encryptedPassword = server.password;
+                break;
+            }
+        }
+        
+        if (encryptedPassword) {
+            try {
+                await decryptWithKey(encryptedPassword, oldPassword);
+            } catch (error) {
+                vscode.window.showErrorMessage('Неверный старый пароль!');
+                return;
+            }
+        }
+    }
+    
+    // Запрашиваем новый пароль
+    const newPassword = await vscode.window.showInputBox({
+        prompt: 'Введите НОВЫЙ мастер-пароль',
+        password: true,
+        ignoreFocusOut: true
+    });
+    
+    if (!newPassword) {
+        return;
+    }
+    
+    // Перешифровываем все пароли
+    await reencryptAllPasswords(oldPassword, newPassword);
+    
+    vscode.window.showInformationMessage('Мастер-пароль успешно изменён!');
+}
+
+// Перешифровка всех паролей со старого ключа на новый
+async function reencryptAllPasswords(oldPassword: string, newPassword: string): Promise<void> {
+    const configPath = path.join(
+        process.env.HOME || process.env.USERPROFILE || '',
+        '.vssh',
+        VSSH_CONFIG_FILENAME
+    );
+    
+    if (!fs.existsSync(configPath)) {
+        return;
+    }
+    
+    const content = fs.readFileSync(configPath, 'utf-8');
+    const data = JSON.parse(content);
+    
+    let hasChanges = false;
+    
+    // Расшифровываем старым ключом и шифруем новым
+    for (const server of data.servers || []) {
+        if (server.password && server.password.includes(':')) {
+            try {
+                const decrypted = await decryptWithKey(server.password, oldPassword);
+                server.password = await encryptWithKey(decrypted, newPassword);
+                hasChanges = true;
+            } catch (error) {
+                console.error(`Failed to reencrypt password for ${server.name}:`, error);
+            }
+        }
+        
+        if (server.gateway && server.gateway.password && server.gateway.password.includes(':')) {
+            try {
+                const decrypted = await decryptWithKey(server.gateway.password, oldPassword);
+                server.gateway.password = await encryptWithKey(decrypted, newPassword);
+                hasChanges = true;
+            } catch (error) {
+                console.error(`Failed to reencrypt gateway password for ${server.name}:`, error);
+            }
+        }
+    }
+    
+    if (hasChanges) {
+        fs.writeFileSync(configPath, JSON.stringify(data, null, 2), 'utf-8');
+    }
+    
+    // Обновляем кэш
+    cachedMasterPassword = newPassword;
+}
+
+// Шифрование с явным ключом
+async function encryptWithKey(text: string, password: string): Promise<string> {
+    const key = crypto.createHash('sha256').update(password).digest();
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
+
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    return iv.toString('hex') + ':' + encrypted;
+}
+
+// Расшифровка с явным ключом
+async function decryptWithKey(encryptedText: string, password: string): Promise<string> {
+    const parts = encryptedText.split(':');
+    if (parts.length !== 2) {
+        return encryptedText;
+    }
+
+    const iv = Buffer.from(parts[0], 'hex');
+    const encrypted = parts[1];
+    const key = crypto.createHash('sha256').update(password).digest();
+
+    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return decrypted;
+}
+
+// Получение ключа шифрования из мастер-пароля
+async function getEncryptionKey(): Promise<Buffer> {
+    const password = await getMasterPassword();
+    return crypto.createHash('sha256').update(password).digest();
+}
+
+// Экспорт для команды смены пароля
+export async function changePasswordCommand(): Promise<void> {
+    await changeMasterPassword();
+}
+
+async function encrypt(text: string): Promise<string> {
     try {
-        const key = getEncryptionKey();
+        const key = await getEncryptionKey();
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
-        
+
         let encrypted = cipher.update(text, 'utf8', 'hex');
         encrypted += cipher.final('hex');
-        
+
         return iv.toString('hex') + ':' + encrypted;
     } catch (error) {
         console.error('Encryption error:', error);
@@ -41,31 +283,32 @@ function encrypt(text: string): string {
     }
 }
 
-function decrypt(encryptedText: string): string {
+async function decrypt(encryptedText: string): Promise<string> {
     try {
         const parts = encryptedText.split(':');
         if (parts.length !== 2) {
             return encryptedText;
         }
-        
+
         const iv = Buffer.from(parts[0], 'hex');
         const encrypted = parts[1];
-        const key = getEncryptionKey();
-        
+        const key = await getEncryptionKey();
+
         const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
         let decrypted = decipher.update(encrypted, 'hex', 'utf8');
         decrypted += decipher.final('utf8');
-        
+
         return decrypted;
     } catch (error) {
         console.error('Decryption error:', error);
-        return encryptedText;
+        throw error;
     }
 }
 
 export class SSHConfigManager {
     private configPath: string;
     private data: SSHConfigData;
+    private loaded: boolean = false;
 
     constructor() {
         // Используем отдельный файл в директории ~/.vssh/
@@ -73,23 +316,34 @@ export class SSHConfigManager {
         const homeDir = process.env.HOME || process.env.USERPROFILE || '';
         const vsshDir = path.join(homeDir, '.vssh');
         this.configPath = path.join(vsshDir, VSSH_CONFIG_FILENAME);
-        this.data = { servers: [], folders: [], tunnels: [] };
-        this.load();
+        this.data = { servers: [], folders: [], tunnels: [], favorites: [], sessions: [] };
+        // НЕ загружаем сразу — сделаем это после запроса мастер-пароля
     }
 
-    private load(): void {
+    // Явная загрузка конфигурации (после запроса мастер-пароля)
+    async load(): Promise<void> {
+        if (this.loaded) return;
+        
         try {
             if (fs.existsSync(this.configPath)) {
                 const content = fs.readFileSync(this.configPath, 'utf-8');
                 this.data = JSON.parse(content);
 
-                // Расшифровываем пароли при загрузке (серверы и gateway)
+                // Расшифровываем пароли при загрузке (мастер-пароль уже запрошен)
                 for (const server of this.data.servers) {
                     if (server.password && server.password.includes(':')) {
-                        server.password = decrypt(server.password);
+                        try {
+                            server.password = await decrypt(server.password);
+                        } catch (error) {
+                            console.error(`Failed to decrypt password for server ${server.name}:`, error);
+                        }
                     }
                     if (server.gateway && server.gateway.password && server.gateway.password.includes(':')) {
-                        server.gateway.password = decrypt(server.gateway.password);
+                        try {
+                            server.gateway.password = await decrypt(server.gateway.password);
+                        } catch (error) {
+                            console.error(`Failed to decrypt gateway password for server ${server.name}:`, error);
+                        }
                     }
                 }
 
@@ -104,7 +358,7 @@ export class SSHConfigManager {
             console.error('Error loading vSSH config:', error);
             this.data = { servers: [], folders: [], tunnels: [], favorites: [], sessions: [] };
         }
-        
+
         // Инициализируем favorites и sessions если нет
         if (!this.data.favorites) {
             this.data.favorites = [];
@@ -112,9 +366,11 @@ export class SSHConfigManager {
         if (!this.data.sessions) {
             this.data.sessions = [];
         }
+        
+        this.loaded = true;
     }
 
-    private save(): void {
+    async save(): Promise<void> {
         try {
             const dir = path.dirname(this.configPath);
             if (!fs.existsSync(dir)) {
@@ -123,14 +379,14 @@ export class SSHConfigManager {
 
             // Создаём копию данных для сохранения с зашифрованными паролями
             const dataToSave = {
-                servers: this.data.servers.map(server => ({
+                servers: await Promise.all(this.data.servers.map(async (server) => ({
                     ...server,
-                    password: server.password ? encrypt(server.password) : undefined,
+                    password: server.password ? await encrypt(server.password) : undefined,
                     gateway: server.gateway ? {
                         ...server.gateway,
-                        password: server.gateway.password ? encrypt(server.gateway.password) : undefined
+                        password: server.gateway.password ? await encrypt(server.gateway.password) : undefined
                     } : undefined
-                })),
+                }))),
                 folders: this.data.folders.map(folder => ({
                     id: folder.id,
                     name: folder.name,

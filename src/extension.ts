@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SSHConfigManager } from './sshConfig';
+import { SSHConfigManager, changePasswordCommand, requireMasterPassword } from './sshConfig';
 import { ServerProvider, ServerItem, FolderItem, VsshTreeItem } from './serverProvider';
 import { SSHConnection } from './sshConnection';
 import { SftpPanel } from './sftpPanel';
@@ -22,11 +22,21 @@ let favoriteProvider: FavoriteProvider | undefined;
 let sessionManager: SessionManager | undefined;
 let sessionProvider: SessionProvider | undefined;
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log('vSSH extension is now active!');
+
+    // Запрашиваем мастер-пароль сразу при старте
+    try {
+        await requireMasterPassword();
+    } catch (err) {
+        console.error('Failed to get master password:', err);
+        // Продолжаем активацию даже если пароль не введён
+    }
 
     // Инициализация менеджеров
     sshConfigManager = new SSHConfigManager();
+    await sshConfigManager.load(); // Явно загружаем после запроса пароля
+    
     tunnelManager = new TunnelManager(sshConfigManager);
     favoriteManager = new FavoriteManager(sshConfigManager);
     sessionManager = new SessionManager(sshConfigManager);
@@ -199,7 +209,7 @@ export function activate(context: vscode.ExtensionContext) {
             if (!item.server) {
                 return;
             }
-            const connection = new SSHConnection(item.server);
+            const connection = new SSHConnection(item.server, sshConfigManager);
             await connection.connect();
         })
     );
@@ -863,6 +873,13 @@ export function activate(context: vscode.ExtensionContext) {
             if (confirm) {
                 await sessionManager.deleteSession(item.session.id);
             }
+        })
+    );
+
+    // Команда: Сменить мастер-пароль
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vssh.changeMasterPassword', async () => {
+            await changePasswordCommand();
         })
     );
 }
