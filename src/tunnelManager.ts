@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as net from 'net';
 import { ServerConfig, TunnelConfig } from './types';
 import { Client } from 'ssh2';
 import * as crypto from 'crypto';
@@ -7,8 +8,14 @@ function generateId(): string {
     return crypto.randomBytes(16).toString('hex');
 }
 
+interface ActiveTunnel {
+    client: Client;
+    server: net.Server;
+    config: TunnelConfig;
+}
+
 export class TunnelManager {
-    private tunnels: Map<number, { client: Client; config: TunnelConfig }> = new Map();
+    private tunnels: Map<number, ActiveTunnel> = new Map();
     private savedTunnels: TunnelConfig[] = [];
     private _onDidChangeTunnels: vscode.EventEmitter<void> = new vscode.EventEmitter();
     readonly onDidChangeTunnels: vscode.Event<void> = this._onDidChangeTunnels.event;
@@ -101,13 +108,27 @@ export class TunnelManager {
             }
 
             client.on('ready', () => {
-                client.forwardIn('localhost', localPort, (err: any) => {
-                    if (err) {
-                        client.end();
-                        reject(new Error(`Ошибка создания туннеля: ${err.message}`));
-                        return;
-                    }
+                // Local Port Forwarding (аналог ssh -L localPort:remoteHost:remotePort):
+                // создаём TCP-сервер на localPort, на каждое соединение открываем
+                // SSH-канал через client.forwardOut до remoteHost:remotePort
+                const tcpServer = net.createServer((socket) => {
+                    client.forwardOut(
+                        '127.0.0.1', localPort,
+                        remoteHost, remotePort,
+                        (err: any, stream: any) => {
+                            if (err) {
+                                socket.end();
+                                return;
+                            }
+                            socket.pipe(stream);
+                            stream.pipe(socket);
+                            socket.on('close', () => stream.end());
+                            stream.on('close', () => socket.end());
+                        }
+                    );
+                });
 
+                tcpServer.listen(localPort, '127.0.0.1', () => {
                     const tunnelConfig: TunnelConfig = {
                         id: generateId(),
                         serverName: server.name,
@@ -119,9 +140,8 @@ export class TunnelManager {
                         autoStart
                     };
 
-                    this.tunnels.set(localPort, { client, config: tunnelConfig });
-                    
-                    // Сохраняем туннель если он новый
+                    this.tunnels.set(localPort, { client, server: tcpServer, config: tunnelConfig });
+
                     if (!this.savedTunnels.find(t => t.localPort === localPort)) {
                         this.savedTunnels.push(tunnelConfig);
                         this.saveTunnels();
@@ -141,6 +161,11 @@ export class TunnelManager {
                     );
                     resolve();
                 });
+
+                tcpServer.on('error', (err) => {
+                    client.end();
+                    reject(new Error(`Не удалось занять порт ${localPort}: ${err.message}`));
+                });
             });
 
             client.on('error', (err: Error) => {
@@ -155,6 +180,7 @@ export class TunnelManager {
     async closeTunnel(localPort: number): Promise<void> {
         const tunnel = this.tunnels.get(localPort);
         if (tunnel) {
+            tunnel.server.close();
             tunnel.client.end();
             this.tunnels.delete(localPort);
             
@@ -238,7 +264,8 @@ export class TunnelManager {
     }
 
     dispose(): void {
-        for (const [port, tunnel] of this.tunnels.entries()) {
+        for (const [, tunnel] of this.tunnels.entries()) {
+            tunnel.server.close();
             tunnel.client.end();
         }
         this.tunnels.clear();
